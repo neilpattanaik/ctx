@@ -1,0 +1,21 @@
+{
+  "name": "ctx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ctx": "./dist/ctx.js"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun && cp dist/index.js dist/ctx.js",
+    "dev": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.10",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "smol-toml": "^1.6.0"
+  }
+}

@@ -19,6 +19,7 @@ __pycache__/
 # Build outputs
 dist/
 build/
+.ctx/runs/
 *.exe
 *.dll
 *.so
@@ -39,3 +40,8 @@ coverage/
 
 # bv (beads viewer) local config and caches
 .bv/
+
+# SQLite artifacts
+*.db
+*.db-wal
+*.db-shm
