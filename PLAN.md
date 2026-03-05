@@ -1287,3 +1287,403 @@ Deterministic constraints:
 
     * `... ‹TRUNCATED: limit=N›`
 
+---
+
+## 22) A1 Inventory: fake/stub seam classification (ctx-1az.1.1)
+
+Generated: 2026-03-05 UTC
+Method: repository-wide seam scan over `test/**/*.test.ts` for runtime/IO/process injection points (`*Impl`, runtime capture shims, adapter call stubs).
+
+### 22.1 Scope summary
+
+- Total test files scanned: 79
+- Files with seam injection patterns: 20
+- Dominant seam categories:
+  - CLI/runtime fake adapters
+  - subprocess seams (`spawnSyncImpl`, `runGitCommandImpl`)
+  - discovery backend API/CLI adapter seams (`runChatCompletion`, `dispatchToolCalls`, `sleep`)
+  - fs pointer seams (`readFile`/`readLink` map shims)
+  - resolver seams (`resolveGlobalGitignorePath`)
+
+### 22.2 File-by-file inventory
+
+| File | Seams observed | Classification | Risk | Replacement plan |
+| --- | --- | --- | --- | --- |
+| `test/cli/subcommand-routing.test.ts` | `createRuntimeCapture`, fake `CliRuntime` (`readFile`, `readLink`, `writeFile`, clipboard, pager) | Replaceable (majority) | High | Move most routing assertions to real-temp-repo harness in `ctx-1az.2.2` + `ctx-1az.2.3`; keep only narrow unit injections for impossible OS-error branches |
+| `test/cli/golden-snapshots.test.ts` | fake runtime + forced `ENOENT` behavior | Replaceable (majority) | High | Rebase snapshots on shared e2e harness/log bundles in `ctx-1az.2.2` + `ctx-1az.2.6`; retain deterministic snapshot checks with real fs paths |
+| `test/integration/cli-e2e.test.ts` | `createRuntimeCapture` wrapper, runtime adapter capture | Required boundary simulation (mostly) | Medium | Keep capture seam for observability, but formalize schema/artifact contract in `ctx-1az.2.1` + `ctx-1az.2.2` |
+| `test/artifacts/explain.test.ts` | in-memory `readFile`/`readLink` IO map | Replaceable | Medium | Convert to temp-fs artifact fixtures in `ctx-1az.1.2` (fs realism lane) |
+| `test/artifacts/manifest.test.ts` | in-memory `readFile`/`readLink` IO map | Replaceable | Medium | Convert to temp-fs artifact fixtures in `ctx-1az.1.2` |
+| `test/prompt/templates.test.ts` | injected `readFile` | Replaceable | Low | Replace with temp template files + real reads in `ctx-1az.1.2` |
+| `test/git/runner.test.ts` | `spawnSyncImpl` fake process responses | Mixed | Medium | Keep seam for rare process/ENOENT branches; add/expand real subprocess integration in `ctx-1az.1.3` |
+| `test/git/diff.test.ts` | `runGitCommandImpl` stubs | Mixed | Medium | Keep parser-focused unit seam; shift behavior coverage to real git repos (`ctx-1az.1.3`) |
+| `test/git/status.test.ts` | `runGitCommandImpl` stubs | Mixed | Medium | Keep synthetic failure branch checks; add real status-path coverage in `ctx-1az.1.3` |
+| `test/git/diff.integration.test.ts` | real `spawnSync("git", ...)` temp repo harness | Required (realistic) | Low | Keep as anchor; extend matrix under `ctx-1az.1.3` |
+| `test/search/ripgrep.test.ts` | `spawnSyncImpl` stubs for availability/timeout/errors | Mixed | Medium | Keep unreachable error simulations; add more real-rg success/fallback parity tests in `ctx-1az.1.3` |
+| `test/tools/search-tools.test.ts` | `isRipgrepAvailableImpl`, `searchContentImpl`, `searchPathsImpl`, fallback impls | Replaceable (majority) | High | Port primary behavior assertions to real backend calls with temp repos in `ctx-1az.1.3`; keep only edge failure seams |
+| `test/tools/git-tools.test.ts` | `collectGitStatusImpl`, `executeDiffModeImpl` stubs | Replaceable (majority) | High | Add real git-backed tool tests in `ctx-1az.1.3`; keep minimal synthetic NOT_FOUND/error branch tests |
+| `test/scanner/gitignore.test.ts` | `resolveGlobalGitignorePath` injection | Required boundary simulation | Low | Keep deterministic seam to avoid host-global git config coupling; document as allowed seam in `ctx-1az.1.5` |
+| `test/scanner/walker.test.ts` | `resolveGlobalGitignorePath` injection | Required boundary simulation | Low | Keep deterministic seam; increase real fs permission edge coverage in `ctx-1az.1.2` |
+| `test/discovery/openai-adapter.test.ts` | `runChatCompletion`, `dispatchToolCalls`, `sleep` stubs | Required boundary simulation | Medium | Keep API seam; add protocol-realistic transcript/contract tests in `ctx-1az.1.4` + backend fallback matrix in `ctx-1az.2.5` |
+| `test/discovery/anthropic-adapter.test.ts` | `dispatchToolCalls`, `sleep` stubs | Required boundary simulation | Medium | Same as above (`ctx-1az.1.4`, `ctx-1az.2.5`) |
+| `test/discovery/google-adapter.test.ts` | `dispatchToolCalls`, `sleep` stubs | Required boundary simulation | Medium | Same as above (`ctx-1az.1.4`, `ctx-1az.2.5`) |
+| `test/discovery/claude-cli-adapter.test.ts` | `dispatchToolCalls`, `sleep` stubs | Required boundary simulation | Medium | Add CLI transcript realism checks under `ctx-1az.1.4` |
+| `test/discovery/gemini-cli-adapter.test.ts` | `dispatchToolCalls` stubs | Required boundary simulation | Medium | Add CLI transcript realism checks under `ctx-1az.1.4` |
+| `test/discovery/codex-cli-adapter.test.ts` | `dispatchToolCalls` stubs | Required boundary simulation | Medium | Add CLI transcript realism checks under `ctx-1az.1.4` |
+
+### 22.3 Risk-ranked replacement priorities
+
+1. High risk, high leverage:
+   - `test/cli/subcommand-routing.test.ts`
+   - `test/cli/golden-snapshots.test.ts`
+   - `test/tools/search-tools.test.ts`
+   - `test/tools/git-tools.test.ts`
+2. Medium risk:
+   - artifact io-map tests
+   - git/search subprocess unit seams
+   - discovery adapter seams (kept, but strengthen protocol realism)
+3. Low risk / keep:
+   - `resolveGlobalGitignorePath` seams in scanner tests (host-global isolation)
+
+### 22.4 A1 completion notes
+
+- This inventory is the baseline for:
+  - `ctx-1az.1.2` (fs realism conversions),
+  - `ctx-1az.1.3` (real subprocess coverage),
+  - `ctx-1az.1.4` (discovery/tool-host protocol realism),
+  - `ctx-1az.1.5` (formal fake-usage policy).
+
+---
+
+## 23) C1 CI lane contract (ctx-1az.3.1)
+
+Generated: 2026-03-05 UTC
+
+### 23.1 Lane definitions
+
+- `build`: compile-only verification (`bun run build`).
+- `test-unit`: all `.test.ts` except dedicated integration/e2e lanes.
+- `test-integration`: all `*.integration.test.ts`.
+- `test-e2e`: `test/integration/cli-e2e.test.ts`.
+- `test-soak` (conditional): performance benchmark assertion lane.
+
+### 23.2 Command contracts (local parity)
+
+- `bun run test:unit`
+- `bun run test:integration`
+- `bun run test:e2e`
+- `bun run test:soak`
+
+CI machine-readable variants:
+
+- `bun run test:unit:ci` -> `test-results/unit.junit.xml`
+- `bun run test:integration:ci` -> `test-results/integration.junit.xml`
+- `bun run test:e2e:ci` -> `test-results/e2e.junit.xml`
+- `bun run test:soak:ci` -> `test-results/soak-benchmark.json`
+
+### 23.3 Trigger policy
+
+- `pull_request` and `push`: run `build` + `test-unit` + `test-integration` + `test-e2e`.
+- `workflow_dispatch`: same lanes; `test-soak` runs only when `run_soak=true`.
+- `schedule` (nightly): includes `test-soak` for drift detection.
+
+### 23.4 Failure diagnostics
+
+- Test lanes emit JUnit XML for machine parsing and artifact retention.
+- Soak lane emits JSON benchmark report with per-size target evaluations and pass/fail status.
+
+---
+
+## 24) C2 prep: coverage policy + gate plumbing (ctx-c8d)
+
+Generated: 2026-03-05 UTC
+
+### 24.1 Per-lane coverage collection
+
+- Unit lane: `coverage/unit/lcov.info`
+- Integration lane: `coverage/integration/lcov.info`
+- E2E lane: `coverage/e2e/lcov.info`
+
+Each CI lane now produces:
+- JUnit XML (`test-results/*.junit.xml`)
+- LCOV report (`coverage/<lane>/lcov.info`)
+
+### 24.2 Threshold policy (baseline gates)
+
+- Unit global floors:
+  - line >= `80%`
+  - functions >= `88%`
+- Unit critical-module line floors:
+  - `src/cli/` >= `80%`
+  - `src/discovery/` >= `80%`
+  - `src/git/` >= `90%`
+  - `src/scanner/` >= `88%`
+  - `src/search/` >= `82%`
+  - `src/tools/` >= `90%`
+- Integration global floors:
+  - line >= `65%`
+  - functions >= `75%`
+- Integration module line floors:
+  - `src/git/` >= `70%`
+  - `src/search/` >= `65%`
+- E2E global floors:
+  - line >= `25%`
+  - functions >= `35%`
+
+### 24.3 Staged threshold escalation targets
+
+- Unit: next target line >= `82%`, functions >= `90%`
+- Integration: next target line >= `68%`, functions >= `78%`
+- E2E: next target line >= `30%`, functions >= `40%`
+
+These next-stage targets are tracked in threshold config metadata and surfaced by the gate script for planned ratcheting.
+
+---
+
+## 25) B7 soak/stress runner contract (ctx-1az.2.7)
+
+Generated: 2026-03-05 UTC
+
+### 25.1 Script
+
+- `test/integration/soak-e2e.ts` provides a deterministic repeated-run e2e soak harness.
+- It generates a fixture repo, executes repeated `ctx` main-command runs, and emits aggregate diagnostics.
+
+### 25.2 Aggregated diagnostics
+
+- Exit-code distribution (`exitCodeCounts`, success/failure totals)
+- Timing summary (`min/avg/p95/max` duration per run)
+- Diagnostic volume summary (total + average per run)
+- Non-determinism signal via normalized output fingerprints:
+  - `stdoutFingerprintCount`
+  - `stderrFingerprintCount`
+  - `driftDetected`
+
+### 25.3 Commands
+
+- Local:
+  - `bun run test:soak:e2e`
+- CI-style JSON output:
+  - `bun run test:soak:e2e:ci` -> `test-results/e2e-soak-report.json`
+
+### 25.4 Determinism policy
+
+- Output fingerprinting normalizes volatile run-id/duration fields before hashing.
+- Optional strict mode (`--assert-deterministic`) fails if fingerprint drift is detected across runs.
+
+---
+
+## 26) C5 testing strategy + e2e diagnostics runbook (ctx-1az.3.5)
+
+Generated: 2026-03-05 UTC
+
+### 26.1 Test taxonomy and realism policy
+
+- `unit` lane (`bun run test:unit`, `bun run test:unit:ci`)
+  - Scope: module and contract tests in `test/**/*.test.ts` excluding integration/e2e.
+  - Realism target: no synthetic replacement of core scanner/index/git/search/selection behavior when temp-fixture tests are practical.
+  - Allowed seams: hard-to-reproduce process/OS failures, deterministic time/backoff control, and external provider boundaries.
+- `integration` lane (`bun run test:integration`, `bun run test:integration:ci`)
+  - Scope: `test/**/*.integration.test.ts`.
+  - Realism target: real filesystem + subprocess behavior (git/rg/temp repos) for primary behavior assertions.
+  - Allowed seams: narrow failure injection only for branches that cannot be triggered reliably with real subprocesses.
+- `e2e` lane (`bun run test:e2e`, `bun run test:e2e:ci`)
+  - Scope: `test/integration/cli-e2e.test.ts`.
+  - Realism target: full CLI pipeline execution with artifact-backed assertions.
+  - Allowed seam: reusable runtime capture harness for deterministic observability and redaction validation.
+- `soak` lanes
+  - Performance benchmark lane: `bun run test:soak`, `bun run test:soak:ci`.
+  - Determinism stress lane: `bun run test:soak:e2e`, `bun run test:soak:e2e:ci`.
+  - Realism target: repeated real command runs over generated repos with fingerprint drift detection.
+
+Testing policy source of truth remains `AGENTS.md` section `Test Realism Policy (Mocks/Fakes/Stubs)`. This runbook operationalizes that policy for daily execution.
+
+### 26.2 Local execution playbook
+
+Recommended pre-push sequence:
+
+1. `bun run build`
+2. `bun run test:unit`
+3. `bun run test:integration`
+4. `bun run test:e2e`
+5. Optional stress/determinism pass:
+   - `bun run test:soak`
+   - `bun run test:soak:e2e`
+
+CI-parity local sequence (with artifacts and coverage gates):
+
+1. `bun run test:unit:ci`
+2. `bun run test:integration:ci`
+3. `bun run test:e2e:ci`
+4. Optional:
+   - `bun run test:soak:ci`
+   - `bun run test:soak:e2e:ci`
+
+### 26.3 CI artifact contract
+
+Workflow: `.github/workflows/ci.yml`
+
+- Unit lane (`lane-unit-quality` artifact)
+  - `test-results/unit.junit.xml`
+  - `coverage/unit/lcov.info`
+- Integration lane (`lane-integration-quality` artifact)
+  - `test-results/integration.junit.xml`
+  - `coverage/integration/lcov.info`
+- E2E lane (`lane-e2e-quality` artifact)
+  - `test-results/e2e.junit.xml`
+  - `coverage/e2e/lcov.info`
+- E2E failure-only diagnostics artifact (`lane-e2e-diagnostics`)
+  - `test-results/e2e-diagnostics/`
+- Soak lane (`soak-benchmark-report` artifact)
+  - `test-results/soak-benchmark.json`
+
+Coverage thresholds are enforced by `test/performance/coverage-gate.ts` against `test/performance/coverage-thresholds.json`.
+
+### 26.4 E2E diagnostics bundle schema and paths
+
+Harness source: `test/integration/e2e-harness.ts`
+
+- Schema version: `ctx-e2e-log.v1`
+- Artifact root resolution order:
+  1. `createRuntimeCapture({ artifactRoot })`
+  2. `CTX_E2E_ARTIFACT_ROOT` env var
+  3. auto temp dir (`/tmp/ctx-e2e-artifacts-*`)
+- Per-command bundle directory shape:
+  - `<artifactRoot>/<captureSessionId>/<test_case_id>/<run_id>/`
+- Bundle files:
+  - `command-transcript.json` (command, argv, env flags, duration, exit code, counts, truncation flags)
+  - `stderr-timeline.json` (ordered stderr sequence for breadcrumb debugging)
+  - `output-files.json` (redacted/truncated output previews and metadata)
+  - `run-artifacts-snapshot.json` (captured repo artifacts inventory snapshot)
+  - `assertion-events.json` (structured assertion events)
+  - `diagnostic-events.jsonl` (redacted diagnostic stream)
+
+Verbosity behavior:
+
+- Local mode: diagnostic event file is capped for readability.
+- CI mode: full diagnostic stream retained for post-failure forensics.
+
+### 26.5 Failure triage runbook
+
+Coverage gate failures (`[coverage]` lines from `coverage-gate.ts`):
+
+1. Re-run failing lane locally (`bun run test:<lane>:ci`).
+2. Read failure type:
+   - global line/functions below floor,
+   - module floor below threshold,
+   - module prefix matched zero files (threshold config drift).
+3. Inspect the matching `coverage/<lane>/lcov.info` and affected tests.
+4. If prefix mismatch is caused by refactor path changes, update `test/performance/coverage-thresholds.json` with explicit rationale in bead comments.
+
+E2E test failures:
+
+1. Re-run `bun run test:e2e:ci` (optionally set `CTX_E2E_ARTIFACT_ROOT=test-results/e2e-diagnostics-local` for stable local inspection).
+2. Inspect failing bundle:
+   - `command-transcript.json` for command/env flags/exit and counts.
+   - `stderr-timeline.json` for chronological breadcrumb chain.
+   - `diagnostic-events.jsonl` for redacted diagnostic context.
+   - `output-files.json` for output path and preview expectations.
+3. Validate redaction invariants:
+   - no raw secret value leaks,
+   - placeholder markers (for example `‹REDACTED:...›`) present where expected.
+4. If determinism assertions fail, normalize run-specific fields (`run_id`, `duration_ms`) and compare residual diff only.
+
+Soak/determinism failures (`test/integration/soak-e2e.ts`):
+
+1. Re-run with JSON output:
+   - `bun run test/integration/soak-e2e.ts --runs 10 --file-count 200 --json --assert-success --assert-deterministic`
+2. Check report sections:
+   - `aggregate.failureCount`,
+   - `aggregate.exitCodeCounts`,
+   - `drift.stdoutFingerprintCount`,
+   - `drift.stderrFingerprintCount`,
+   - `drift.driftDetected`.
+3. Use run-level hashes and command bundles to isolate first divergent run.
+
+### 26.6 Operational checklist for new tests
+
+Before merging new or changed tests:
+
+1. Prefer real-temp-repo and real subprocess assertions for behavior paths.
+2. If a fake seam is unavoidable, document boundary justification inline in the test.
+3. Keep fake scope minimal and add at least one real-behavior companion assertion in the same feature family when feasible.
+4. Ensure lane command + artifact expectations remain consistent with `.github/workflows/ci.yml` and `package.json`.
+
+---
+
+## 27) C4 flaky-test detection + controlled rerun policy (ctx-2dx)
+
+Generated: 2026-03-05 UTC
+
+### 27.1 Runner scripts
+
+- Primary gate script: `test/performance/e2e-flake-gate.ts`
+  - wraps the CI e2e lane command,
+  - applies controlled reruns (`--max-reruns`),
+  - classifies run outcome as:
+    - `stable_pass`
+    - `flaky_recovered`
+    - `hard_fail`
+  - enforces strict default behavior (`flaky_recovered` returns non-zero unless `--allow-flaky-pass` is set).
+- Secondary analysis script: `test/integration/flaky-e2e.ts`
+  - runs cycle-based failure signature analysis on failing e2e lanes for deeper triage.
+- Default gate command under policy: `bun run test:e2e:ci:raw`
+- Cycle model:
+  - run initial attempt for each cycle,
+  - if it fails, apply controlled reruns up to `--max-reruns`,
+  - classify cycle outcome as:
+    - `pass`
+    - `flaky` (fails then passes on rerun)
+    - `persistent_fail` (repeated same failure signature)
+    - `unstable_fail` (failure signatures shift across reruns)
+
+### 27.2 Variance metrics captured
+
+- Per attempt:
+  - exit code
+  - duration
+  - failed test names
+  - failure signature
+  - normalized stdout/stderr hashes
+  - stdout/stderr preview excerpts
+- Aggregate:
+  - counts by cycle classification
+  - total attempts
+  - duration stats (`min/avg/p95/max`)
+  - output fingerprint cardinality (`stdout`/`stderr`)
+  - flaky signature frequency map
+
+### 27.3 Controlled rerun policy
+
+- CI e2e lane command:
+  - `bun run test:e2e:ci`
+  - now runs through `test:e2e:flake-gate` (single command + controlled rerun policy).
+- Gate report outputs:
+  - `test-results/e2e-flake-gate-report.json`
+  - `test-results/e2e-flake-gate-history.json`
+- Failure-only deep analysis command:
+  - `bun run test:e2e:flake:ci`
+  - writes:
+    - `test-results/e2e-flake-report.json`
+    - `test-results/e2e-flake-history.json`
+- Exit behavior:
+  - gate script: non-zero on `hard_fail` and `flaky_recovered` (strict by default).
+  - analysis script: non-zero on persistent/unstable failures; optional strict flaky mode via `--fail-on-flaky`.
+
+### 27.4 Recurring-flake follow-up automation
+
+- History accumulator tracks flaky signature counts in `test-results/e2e-flake-history.json`.
+- Recurrence threshold is configurable via `--recurring-threshold` (default `2`).
+- Optional auto-follow-up issue creation:
+  - `--auto-create-beads`
+  - auto-creates bug beads with `discovered-from:<parent>` links (default parent `ctx-1az.3.4`) only when a signature newly crosses the recurrence threshold (prevents duplicate bead spam on later runs).
+
+### 27.5 CI wiring
+
+- Workflow: `.github/workflows/ci.yml`
+- E2E lane always uploads flake-gate artifact (`lane-e2e-flake-gate`) with gate report + history.
+- On e2e lane failure:
+  1. Upload normal diagnostics bundle (`lane-e2e-diagnostics`)
+  2. Run flaky rerun analysis script (`bun run test:e2e:flake:ci`)
+  3. Upload flaky analysis artifact (`lane-e2e-flake-analysis`)
+  4. Add diagnostics + flake artifact pointers to `GITHUB_STEP_SUMMARY`

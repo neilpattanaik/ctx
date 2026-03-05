@@ -337,6 +337,38 @@ ubs .                                   # Whole project
 - **Important** (production): Type narrowing, division-by-zero, resource leaks
 - **Contextual** (judgment): TODO/FIXME, console logs
 
+---
+
+## Test Realism Policy (Mocks/Fakes/Stubs)
+
+Default stance: prefer **real behavior tests** over injected fakes for core repo logic.
+
+### Allowed (with rationale in test comments)
+
+- External network/provider boundaries where deterministic real calls are unsafe/impractical.
+- Rare OS/process failure injection that is difficult to trigger reliably (`ETIMEDOUT`, missing binaries, spawn failures).
+- Time/backoff control (`sleep`, clock seams) when needed for deterministic retry tests.
+
+### Disallowed by default
+
+- Replacing core scanner/index/selection/prompt logic with synthetic return values when a temp-repo fixture can cover it.
+- Replacing git/search happy paths entirely with fake subprocess output.
+- Adding new broad runtime harness fakes for CLI behavior when black-box integration tests can assert outcomes.
+
+### Required when introducing a fake seam
+
+1. Explain why real-behavior testing is not practical for that case.
+2. Keep fake scope minimal and isolated to the boundary.
+3. Add at least one corresponding real-behavior test for the same feature family when feasible.
+4. Document remaining risk in the owning bead.
+
+### PR Review Checklist (testing changes)
+
+- Does this test use a fake/stub/mock? If yes, is the boundary justification explicit?
+- Is there sufficient real-behavior coverage for the same path?
+- Could a temp fixture replace the fake without major instability?
+- Are error-path injections limited to truly hard-to-reproduce failures?
+
 <!-- bv-agent-instructions-v1 -->
 
 ---
