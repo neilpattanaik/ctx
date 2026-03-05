@@ -70,6 +70,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
       - name: Run ${{ matrix.lane.id }} lane
         env:
           CTX_E2E_ARTIFACT_ROOT: ${{ matrix.lane.diagnostics }}
