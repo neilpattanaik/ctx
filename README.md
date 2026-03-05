@@ -34,13 +34,13 @@ curl -fsSL https://raw.githubusercontent.com/neilpattanaik/ctx/main/scripts/inst
 Install a specific release tag:
 
 ```bash
-CTX_VERSION=v0.2.2 curl -fsSL https://raw.githubusercontent.com/neilpattanaik/ctx/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/neilpattanaik/ctx/main/scripts/install.sh | CTX_VERSION=v0.2.2 bash
 ```
 
 Install to a custom directory:
 
 ```bash
-CTX_INSTALL_DIR="$HOME/.local/bin" curl -fsSL https://raw.githubusercontent.com/neilpattanaik/ctx/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/neilpattanaik/ctx/main/scripts/install.sh | CTX_INSTALL_DIR="$HOME/.local/bin" bash
 ```
 
 Release binaries are published for:
