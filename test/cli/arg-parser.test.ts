@@ -42,6 +42,8 @@ describe("CLI argument parser", () => {
       "--agent-max-turns",
       "10",
       "--dry-run",
+      "--task-file",
+      "task.md",
       "--repo",
       "/repo",
       "--cache",
@@ -102,6 +104,7 @@ describe("CLI argument parser", () => {
     expect(parsed.value.options.copy).toBe(true);
     expect(parsed.value.options.budget).toBe(50000);
     expect(parsed.value.options.discover).toBe("offline");
+    expect(parsed.value.options.taskFile).toBe("task.md");
     expect(parsed.value.options.include).toEqual(["src/**"]);
     expect(parsed.value.options.entrypoint).toEqual(["src/index.ts"]);
     expect(parsed.value.options.privacy).toBe("strict");
@@ -150,6 +153,28 @@ describe("CLI argument parser", () => {
     expect(unknownFlag.ok).toBe(false);
     if (!unknownFlag.ok) {
       expect(unknownFlag.exitCode).toBe(2);
+    }
+
+    const airgapWithLlm = parseCliArgs([
+      "--privacy",
+      "airgap",
+      "--discover",
+      "llm",
+    ]);
+    expect(airgapWithLlm.ok).toBe(false);
+    if (!airgapWithLlm.ok) {
+      expect(airgapWithLlm.exitCode).toBe(2);
+    }
+
+    const airgapWithLocalCli = parseCliArgs([
+      "--privacy",
+      "airgap",
+      "--discover",
+      "local-cli",
+    ]);
+    expect(airgapWithLocalCli.ok).toBe(false);
+    if (!airgapWithLocalCli.ok) {
+      expect(airgapWithLocalCli.exitCode).toBe(2);
     }
   });
 

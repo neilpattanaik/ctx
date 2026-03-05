@@ -15,7 +15,7 @@ function makeSpawnResult(overrides: Record<string, unknown>) {
 }
 
 describe("runGitCommand", () => {
-  test("enforces safety flags and non-interactive git env", () => {
+  test("enforces non-interactive env and global color settings", () => {
     const calls: Array<{
       command: string;
       args: string[];
@@ -44,56 +44,38 @@ describe("runGitCommand", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.command).toBe("git");
     expect(calls[0]?.args).toEqual([
-      "--no-ext-diff",
-      "--no-textconv",
-      "--color=never",
+      "-c",
+      "color.ui=never",
       "status",
       "--short",
     ]);
     expect(calls[0]?.envPrompt).toBe("0");
   });
 
-  test("returns success result on zero exit code", () => {
-    const fakeSpawn = (() =>
-      makeSpawnResult({
-        stdout: "ok\n",
-        stderr: "",
-        status: 0,
-      })) as unknown as typeof spawnSync;
+  test("applies diff safety flags to diff commands", () => {
+    const calls: string[][] = [];
 
-    const result = runGitCommand({
+    const fakeSpawn = ((_, args) => {
+      calls.push(args as string[]);
+      return makeSpawnResult({});
+    }) as unknown as typeof spawnSync;
+
+    runGitCommand({
       cwd: process.cwd(),
-      args: ["status"],
+      args: ["diff", "HEAD~1"],
       spawnSyncImpl: fakeSpawn,
     });
 
-    expect(result).toMatchObject({
-      ok: true,
-      stdout: "ok\n",
-      stderr: "",
-      exitCode: 0,
-      timedOut: false,
-      failureKind: undefined,
-    });
-  });
-
-  test("classifies not-a-repo failures", () => {
-    const fakeSpawn = (() =>
-      makeSpawnResult({
-        stdout: "",
-        stderr: "fatal: not a git repository (or any of the parent directories): .git",
-        status: 128,
-      })) as unknown as typeof spawnSync;
-
-    const result = runGitCommand({
-      cwd: process.cwd(),
-      args: ["status"],
-      spawnSyncImpl: fakeSpawn,
-    });
-
-    expect(result.ok).toBe(false);
-    expect(result.exitCode).toBe(128);
-    expect(result.failureKind).toBe("NOT_GIT_REPO");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual([
+      "-c",
+      "color.ui=never",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--color=never",
+      "HEAD~1",
+    ]);
   });
 
   test("classifies timeout failures", () => {

@@ -42,6 +42,7 @@ export interface CliOptions {
   agentMaxTurns?: number;
   noLlm: boolean;
   dryRun: boolean;
+  taskFile?: string;
   repo?: string;
   cache?: CacheMode;
   cacheDir?: string;
@@ -163,6 +164,7 @@ const LONG_OPTION_DEFS: Record<string, OptionDefinition> = {
   "--agent-max-turns": { key: "agentMaxTurns", type: "number", min: 1 },
   "--no-llm": { key: "noLlm", type: "boolean" },
   "--dry-run": { key: "dryRun", type: "boolean" },
+  "--task-file": { key: "taskFile", type: "string" },
   "--repo": { key: "repo", type: "string" },
   "--cache": { key: "cache", type: "enum", values: CACHE_VALUES },
   "--cache-dir": { key: "cacheDir", type: "string" },
@@ -433,6 +435,15 @@ export function parseCliArgs(argv: readonly string[]): CliParseResult {
 
   if (options.noLlm && options.discover === "llm") {
     return invalidUsage("Options --no-llm and --discover llm are mutually exclusive.");
+  }
+
+  if (
+    options.privacy === "airgap" &&
+    (options.discover === "llm" || options.discover === "local-cli")
+  ) {
+    return invalidUsage(
+      "Options --privacy airgap and --discover llm/local-cli are mutually exclusive.",
+    );
   }
 
   if (subcommand === null) {

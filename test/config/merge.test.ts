@@ -58,4 +58,36 @@ describe("config precedence merge", () => {
     overrideIgnore.push("**/cache/**");
     expect(merged.repo.ignore).toEqual(["**/build/**"]);
   });
+
+  test("forces offline discovery when privacy mode is airgap", () => {
+    const merged = mergeConfigPrecedence({
+      repoConfig: {
+        privacy: { mode: "airgap" },
+        discovery: { discover: "auto" },
+      },
+    });
+
+    expect(merged.privacy.mode).toBe("airgap");
+    expect(merged.discovery.discover).toBe("offline");
+  });
+
+  test("rejects explicit llm/local-cli discovery in airgap mode", () => {
+    expect(() =>
+      mergeConfigPrecedence({
+        cliOverrides: {
+          privacy: { mode: "airgap" },
+          discovery: { discover: "llm" },
+        },
+      }),
+    ).toThrow("privacy mode 'airgap' is incompatible");
+
+    expect(() =>
+      mergeConfigPrecedence({
+        cliOverrides: {
+          privacy: { mode: "airgap" },
+          discovery: { discover: "local-cli" },
+        },
+      }),
+    ).toThrow("privacy mode 'airgap' is incompatible");
+  });
 });

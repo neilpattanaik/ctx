@@ -1,5 +1,8 @@
+import { capPatchFilesByTokens, estimatePatchFileTokens } from "./patch-cap";
 import type { GitCommandResult } from "./runner";
 import { runGitCommand } from "./runner";
+
+const DEFAULT_MAX_PATCH_TOKENS = 6000;
 
 export type GitDiffMode =
   | "off"
@@ -44,12 +47,30 @@ export interface GitDiffResult {
   files: GitDiffFile[];
   stderr: string;
   failureKind?: GitCommandResult["failureKind"];
+  capping?: GitDiffCapping;
+  truncationNotice?: string;
+  truncatedFileCount?: number;
+  truncatedTokenEstimate?: number;
+}
+
+export interface GitDiffCapping {
+  applied: boolean;
+  maxPatchTokens: number;
+  usedPatchTokens: number;
+  omittedFiles: number;
+  omittedTokensApprox: number;
+  marker?: string;
 }
 
 export interface ExecuteDiffOptions {
   cwd: string;
   mode: GitDiffMode;
   maxFiles: number;
+  maxPatchTokens?: number;
+  selectedPaths?: string[];
+  taskTerms?: string[];
+  relevancePaths?: string[];
+  relevanceTerms?: string[];
   runGitCommandImpl?: typeof runGitCommand;
 }
 
@@ -70,29 +91,6 @@ interface MutableDiffFile {
 const HUNK_HEADER_PATTERN =
   /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
-function toDiffStatus(rawStatus: string): GitDiffStatus {
-  if (rawStatus.startsWith("R")) {
-    return "renamed";
-  }
-  if (rawStatus.startsWith("C")) {
-    return "copied";
-  }
-  switch (rawStatus) {
-    case "A":
-      return "added";
-    case "M":
-      return "modified";
-    case "D":
-      return "deleted";
-    case "T":
-      return "type_changed";
-    case "U":
-      return "unmerged";
-    default:
-      return "unknown";
-  }
-}
-
 function normalizePath(path: string): string {
   if (path.startsWith("a/") || path.startsWith("b/")) {
     return path.slice(2);
@@ -100,24 +98,56 @@ function normalizePath(path: string): string {
   return path;
 }
 
-function fileHunkSize(file: GitDiffFile): number {
-  return file.hunks.reduce((sum, hunk) => sum + hunk.content.length, 0);
+export function estimatePatchTokens(files: readonly GitDiffFile[]): number {
+  return files.reduce(
+    (sum, file) => sum + estimatePatchFileTokens(file),
+    0,
+  );
 }
 
-function trimToMaxFiles(files: GitDiffFile[], maxFiles: number): GitDiffFile[] {
-  if (maxFiles <= 0 || files.length <= maxFiles) {
-    return files;
+export function applyPatchTokenCap(options: {
+  files: GitDiffFile[];
+  maxFiles?: number;
+  maxPatchTokens: number;
+  relevancePaths?: string[];
+  relevanceTerms?: string[];
+}): { files: GitDiffFile[]; capping: GitDiffCapping } {
+  const normalizedMaxPatchTokens = Math.floor(Math.max(options.maxPatchTokens, 0));
+  const capped = capPatchFilesByTokens(options.files, {
+    maxPatchTokens: normalizedMaxPatchTokens,
+    maxFiles: options.maxFiles,
+    selectedPaths: options.relevancePaths,
+    taskTerms: options.relevanceTerms,
+  });
+
+  if (!capped.truncated) {
+    return {
+      files: options.files.map((file) => ({
+        ...file,
+        hunks: file.hunks.map((hunk) => ({ ...hunk })),
+      })),
+      capping: {
+        applied: false,
+        maxPatchTokens: normalizedMaxPatchTokens,
+        usedPatchTokens: estimatePatchTokens(options.files),
+        omittedFiles: 0,
+        omittedTokensApprox: 0,
+        marker: undefined,
+      },
+    };
   }
 
-  return [...files]
-    .sort((left, right) => {
-      const sizeDelta = fileHunkSize(right) - fileHunkSize(left);
-      if (sizeDelta !== 0) {
-        return sizeDelta;
-      }
-      return left.path.localeCompare(right.path);
-    })
-    .slice(0, maxFiles);
+  return {
+    files: capped.files,
+    capping: {
+      applied: true,
+      maxPatchTokens: normalizedMaxPatchTokens,
+      usedPatchTokens: capped.usedTokens,
+      omittedFiles: capped.truncatedFiles,
+      omittedTokensApprox: capped.truncatedTokens,
+      marker: capped.marker,
+    },
+  };
 }
 
 export function resolveDiffCommand(mode: GitDiffMode): DiffCommandPlan {
@@ -304,10 +334,24 @@ export function executeDiffMode(options: ExecuteDiffOptions): GitDiffResult {
   }
 
   const parsedFiles = parseUnifiedDiff(commandResult.stdout);
+  const maxPatchTokens = options.maxPatchTokens ?? DEFAULT_MAX_PATCH_TOKENS;
+
+  const capped = applyPatchTokenCap({
+    files: parsedFiles,
+    maxFiles: options.maxFiles,
+    maxPatchTokens,
+    relevancePaths: options.selectedPaths,
+    relevanceTerms: options.taskTerms,
+  });
+
   return {
     ok: true,
     mode: options.mode,
-    files: trimToMaxFiles(parsedFiles, options.maxFiles),
+    files: capped.files,
     stderr: commandResult.stderr,
+    capping: capped.capping,
+    truncationNotice: capped.capping.marker,
+    truncatedFileCount: capped.capping.omittedFiles,
+    truncatedTokenEstimate: capped.capping.omittedTokensApprox,
   };
 }

@@ -69,4 +69,43 @@ describe("parseCtxToolBlocks", () => {
       code: "INVALID_ARGS",
     });
   });
+
+  test("parses protocol-style mixed transcript with ctx_result chatter and malformed blocks", () => {
+    const text = [
+      "assistant: investigating repository shape",
+      "```ctx_tool",
+      '{"id":"bad-json","tool":"file_search","args":{"pattern":"auth"}',
+      "```",
+      "```ctx_result",
+      '{"id":"bad-json","ok":false,"error":{"code":"INVALID_JSON","message":"oops"}}',
+      "```",
+      "assistant: retrying with corrected call",
+      "```ctx_tool",
+      '{"id":"call-2","tool":"select_get","args":{"view":"files","path_glob":"src/**"}}',
+      "```",
+      "assistant: one more tool call",
+      "```ctx_tool",
+      '{"id":"call-3","tool":"read_file","args":{"path":"src/index.ts","start_line":1,"end_line":40}}',
+      "```",
+    ].join("\n");
+
+    const result = parseCtxToolBlocks(text);
+    expect(result.calls).toEqual([
+      {
+        id: "call-2",
+        tool: "select_get",
+        args: { view: "files", path_glob: "src/**" },
+      },
+      {
+        id: "call-3",
+        tool: "read_file",
+        args: { path: "src/index.ts", start_line: 1, end_line: 40 },
+      },
+    ]);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toMatchObject({
+      index: 1,
+      code: "INVALID_JSON",
+    });
+  });
 });

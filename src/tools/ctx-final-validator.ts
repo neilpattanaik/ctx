@@ -38,6 +38,14 @@ function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function normalizeRepoPath(pathValue: string): string {
+  return pathValue
+    .replace(/\\/g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/\/+/g, "/")
+    .replace(/\/+$/g, "");
+}
+
 function readNonEmptyString(
   value: unknown,
   field: string,
@@ -265,7 +273,12 @@ export function validateCtxFinalPayload(
       if (path === null || notesText === null) {
         continue;
       }
-      notes.push({ path, notes: notesText });
+      const normalizedPath = normalizeRepoPath(path);
+      if (normalizedPath.length === 0) {
+        issues.push({ field: `${itemPath}.path`, message: "must be a valid repo-relative path" });
+        continue;
+      }
+      notes.push({ path: normalizedPath, notes: notesText });
     }
 
     return notes;
@@ -336,7 +349,7 @@ export function validateCtxFinalPayload(
     tests: normalizePathNotes(handoffSummary.tests, "handoff_summary.tests"),
   };
 
-  const availablePathSet = new Set(options.availablePaths);
+  const availablePathSet = new Set(options.availablePaths.map((pathValue) => normalizeRepoPath(pathValue)));
   const normalizedSelection: SelectionEntry[] = [];
   for (let index = 0; index < selection.length; index += 1) {
     const item = selection[index];
@@ -346,7 +359,7 @@ export function validateCtxFinalPayload(
       continue;
     }
 
-    const path = readNonEmptyString(item.path, `${itemPath}.path`, issues);
+    const pathRaw = readNonEmptyString(item.path, `${itemPath}.path`, issues);
     const mode = readNonEmptyString(item.mode, `${itemPath}.mode`, issues);
     const priority = readNonEmptyString(item.priority, `${itemPath}.priority`, issues);
     const rationale = readNonEmptyString(
@@ -355,7 +368,16 @@ export function validateCtxFinalPayload(
       issues,
     );
 
-    if (path === null || mode === null || priority === null || rationale === null) {
+    if (pathRaw === null || mode === null || priority === null || rationale === null) {
+      continue;
+    }
+
+    const path = normalizeRepoPath(pathRaw);
+    if (path.length === 0) {
+      issues.push({
+        field: `${itemPath}.path`,
+        message: "must be a valid repo-relative path",
+      });
       continue;
     }
 
@@ -430,10 +452,10 @@ export function validateCtxFinalFromText(
   options: CtxFinalValidationOptions,
 ): CtxFinalValidationResult {
   const parsed = parseCtxFinalBlocks(text);
-  if (parsed.errors.length > 0) {
-    return buildFailure(parsed.errors, options, text);
-  }
   if (parsed.payloads.length === 0) {
+    if (parsed.errors.length > 0) {
+      return buildFailure(parsed.errors, options, text);
+    }
     return buildFailure(
       [{ field: "ctx_final", message: "missing ctx_final block" }],
       options,
@@ -441,5 +463,18 @@ export function validateCtxFinalFromText(
     );
   }
 
-  return validateCtxFinalPayload(parsed.payloads[0], options);
+  const latestPayload = parsed.payloads[parsed.payloads.length - 1];
+  const validation = validateCtxFinalPayload(latestPayload, options);
+  if (validation.ok) {
+    return validation;
+  }
+  if (parsed.errors.length === 0) {
+    return validation;
+  }
+
+  return buildFailure(
+    [...parsed.errors, ...validation.issues],
+    options,
+    validation.malformedOutput,
+  );
 }

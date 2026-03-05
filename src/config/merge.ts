@@ -28,6 +28,29 @@ function mergeSection<T extends Record<string, unknown>>(
   return result as T;
 }
 
+function applyPrivacyModeRouting(config: CtxConfig): CtxConfig {
+  if (config.privacy.mode !== "airgap") {
+    return config;
+  }
+
+  if (
+    config.discovery.discover === "llm" ||
+    config.discovery.discover === "local-cli"
+  ) {
+    throw new Error(
+      "privacy mode 'airgap' is incompatible with discover mode 'llm' or 'local-cli'",
+    );
+  }
+
+  return {
+    ...config,
+    discovery: {
+      ...config.discovery,
+      discover: "offline",
+    },
+  };
+}
+
 export function mergeConfigPrecedence(options?: {
   defaults?: CtxConfig;
   userConfig?: PartialCtxConfig | null;
@@ -41,7 +64,7 @@ export function mergeConfigPrecedence(options?: {
   const envConfig = options?.envConfig;
   const cliOverrides = options?.cliOverrides;
 
-  return {
+  const merged: CtxConfig = {
     defaults: mergeSection(
       defaults.defaults,
       userConfig?.defaults,
@@ -99,4 +122,6 @@ export function mergeConfigPrecedence(options?: {
       cliOverrides?.output,
     ),
   };
+
+  return applyPrivacyModeRouting(merged);
 }

@@ -157,6 +157,7 @@ export interface SymbolInfo {
   kind: SymbolKind;
   signature: string;
   line: number;
+  endLine?: number;
 }
 
 export interface CodemapEntry {

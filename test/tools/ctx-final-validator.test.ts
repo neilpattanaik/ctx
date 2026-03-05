@@ -71,6 +71,21 @@ describe("ctx_final validator", () => {
     }
   });
 
+  test("normalizes equivalent relative selection paths before existence checks", () => {
+    const payload = validPayload();
+    payload.selection[0].path = "./src\\index.ts";
+
+    const result = validateCtxFinalPayload(payload, {
+      availablePaths: ["src/index.ts", "src/tools/index.ts"],
+      turnsRemaining: 2,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.discovery.selection[0]?.path).toBe("src/index.ts");
+    }
+  });
+
   test("ignores extra fields but fails on missing required fields", () => {
     const payload = {
       ...validPayload(),
@@ -142,6 +157,129 @@ describe("ctx_final validator", () => {
     const parsed = parseCtxFinalBlocks(text);
     expect(parsed.payloads).toHaveLength(0);
     expect(parsed.errors).toHaveLength(1);
+  });
+
+  test("accepts later valid ctx_final block when earlier block is malformed", () => {
+    const valid = validPayload();
+    valid.selection[0].path = "src/index.ts";
+
+    const text = [
+      "assistant reasoning",
+      "```ctx_final",
+      "{not-json}",
+      "```",
+      "assistant correction",
+      "```ctx_final",
+      JSON.stringify(valid),
+      "```",
+    ].join("\n");
+
+    const result = validateCtxFinalFromText(text, {
+      availablePaths: ["src/index.ts", "src/tools/index.ts"],
+      turnsRemaining: 2,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.discovery.selection[0]?.path).toBe("src/index.ts");
+    }
+  });
+
+  test("uses latest payload when multiple ctx_final blocks are present", () => {
+    const first = validPayload();
+    first.selection[0].path = "src/index.ts";
+    const second = validPayload();
+    second.selection[0].path = "src/tools/index.ts";
+
+    const text = [
+      "```ctx_final",
+      JSON.stringify(first),
+      "```",
+      "```ctx_final",
+      JSON.stringify(second),
+      "```",
+    ].join("\n");
+
+    const result = validateCtxFinalFromText(text, {
+      availablePaths: ["src/index.ts", "src/tools/index.ts"],
+      turnsRemaining: 2,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.discovery.selection[0]?.path).toBe("src/tools/index.ts");
+    }
+  });
+
+  test("returns detailed issues for adversarial malformed payload corpus", () => {
+    const malformedPayloads = [
+      {
+        label: "selection mode typo",
+        payload: {
+          ...validPayload(),
+          selection: [
+            {
+              path: "src/index.ts",
+              mode: "slicez",
+              priority: "core",
+              rationale: "bad mode",
+            },
+          ],
+        },
+        expectedField: "selection[0].mode",
+      },
+      {
+        label: "slice range inversion",
+        payload: {
+          ...validPayload(),
+          selection: [
+            {
+              path: "src/tools/index.ts",
+              mode: "slices",
+              priority: "support",
+              rationale: "bad range",
+              slices: [
+                {
+                  start_line: 20,
+                  end_line: 10,
+                  description: "inverted",
+                },
+              ],
+            },
+          ],
+        },
+        expectedField: "selection[0].slices[0].end_line",
+      },
+      {
+        label: "invalid open_questions shape",
+        payload: {
+          ...validPayload(),
+          open_questions: [
+            {
+              question: "q",
+              why_it_matters: "w",
+              default_assumption: "",
+            },
+          ],
+        },
+        expectedField: "open_questions[0].default_assumption",
+      },
+    ] as const;
+
+    for (const entry of malformedPayloads) {
+      const result = validateCtxFinalPayload(entry.payload, {
+        availablePaths: ["src/index.ts", "src/tools/index.ts"],
+        turnsRemaining: 1,
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.action).toBe("retry");
+        expect(result.issues.some((issue) => issue.field === entry.expectedField)).toBe(
+          true,
+        );
+      }
+    }
   });
 
   test("uses fallback action when validation fails with no turns remaining", () => {

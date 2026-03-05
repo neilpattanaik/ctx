@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { runGitCommand } from "../../src/git";
-import { executeDiffMode, parseUnifiedDiff, resolveDiffCommand } from "../../src/git";
+import {
+  applyPatchTokenCap,
+  estimatePatchTokens,
+  executeDiffMode,
+  parseUnifiedDiff,
+  resolveDiffCommand,
+} from "../../src/git";
 
 const SAMPLE_DIFF = [
   "diff --git a/src/a.ts b/src/a.ts",
@@ -106,6 +112,78 @@ describe("parseUnifiedDiff", () => {
   });
 });
 
+describe("applyPatchTokenCap", () => {
+  test("keeps file list unchanged when within patch token budget", () => {
+    const files = parseUnifiedDiff(SAMPLE_DIFF);
+    const fullBudget = estimatePatchTokens(files);
+
+    const capped = applyPatchTokenCap({ files, maxPatchTokens: fullBudget });
+
+    expect(capped.files.map((file) => file.path)).toEqual(files.map((file) => file.path));
+    expect(capped.capping.applied).toBe(false);
+    expect(capped.capping.marker).toBeUndefined();
+  });
+
+  test("prioritizes relevance paths before size tie-breakers", () => {
+    const files = parseUnifiedDiff(SAMPLE_DIFF);
+    const target = files.find((file) => file.path === "src/new.ts");
+    expect(target).toBeDefined();
+
+    const budget = estimatePatchTokens([target!]);
+    const capped = applyPatchTokenCap({
+      files,
+      maxPatchTokens: budget,
+      relevancePaths: ["src/new.ts"],
+    });
+
+    expect(capped.files).toHaveLength(1);
+    expect(capped.files[0]?.path).toBe("src/new.ts");
+    expect(capped.capping.applied).toBe(true);
+  });
+
+  test("truncates at hunk boundaries for partially fitting files", () => {
+    const multiHunkFile = {
+      path: "src/multi.ts",
+      status: "modified" as const,
+      modeChanged: false,
+      isBinary: false,
+      hunks: [
+        {
+          oldStart: 1,
+          oldCount: 1,
+          newStart: 1,
+          newCount: 1,
+          content: "@@ -1 +1 @@\n-aaa\n+bbb",
+        },
+        {
+          oldStart: 10,
+          oldCount: 1,
+          newStart: 10,
+          newCount: 1,
+          content: "@@ -10 +10 @@\n-cccccccccc\n+dddddddddd",
+        },
+      ],
+    };
+
+    const oneHunkBudget = estimatePatchTokens([
+      {
+        ...multiHunkFile,
+        hunks: [multiHunkFile.hunks[0]!],
+      },
+    ]);
+
+    const capped = applyPatchTokenCap({
+      files: [multiHunkFile],
+      maxPatchTokens: oneHunkBudget,
+    });
+
+    expect(capped.files).toHaveLength(1);
+    expect(capped.files[0]?.hunks).toHaveLength(1);
+    expect(capped.capping.applied).toBe(true);
+    expect(capped.capping.marker).toContain("TRUNCATED");
+  });
+});
+
 describe("executeDiffMode", () => {
   test("returns empty file list when diff mode is off", () => {
     const result = executeDiffMode({
@@ -140,6 +218,31 @@ describe("executeDiffMode", () => {
     expect(result.ok).toBe(true);
     expect(result.files).toHaveLength(2);
     expect(result.files[0]?.path).toBe("src/a.ts");
+  });
+
+  test("enforces maxPatchTokens and emits truncation metadata", () => {
+    const fakeRunGit = (() => ({
+      ok: true,
+      stdout: SAMPLE_DIFF,
+      stderr: "",
+      exitCode: 0,
+      timedOut: false,
+    })) as unknown as typeof runGitCommand;
+
+    const result = executeDiffMode({
+      cwd: process.cwd(),
+      mode: "uncommitted",
+      maxFiles: 20,
+      maxPatchTokens: 20,
+      relevancePaths: ["src/new.ts"],
+      runGitCommandImpl: fakeRunGit,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.capping).toBeDefined();
+    expect(result.capping?.usedPatchTokens).toBeLessThanOrEqual(20);
+    expect(result.capping?.applied).toBe(true);
+    expect(result.capping?.marker).toContain("TRUNCATED");
   });
 
   test("bubbles command failure metadata", () => {

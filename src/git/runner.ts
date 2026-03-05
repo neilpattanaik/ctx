@@ -1,7 +1,8 @@
 import { spawnSync, type SpawnSyncOptionsWithStringEncoding } from "node:child_process";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-const GIT_SAFETY_FLAGS = ["--no-ext-diff", "--no-textconv", "--color=never"];
+const GIT_GLOBAL_FLAGS = ["-c", "color.ui=never"];
+const GIT_DIFF_FLAGS = ["--no-ext-diff", "--no-textconv", "--color=never"];
 
 export type GitFailureKind =
   | "NOT_GIT_REPO"
@@ -25,6 +26,19 @@ export interface RunGitCommandOptions {
   args: string[];
   timeoutMs?: number;
   spawnSyncImpl?: typeof spawnSync;
+}
+
+function buildCommandArgs(args: readonly string[]): string[] {
+  if (args.length === 0) {
+    return [...GIT_GLOBAL_FLAGS];
+  }
+
+  const [subcommand, ...rest] = args;
+  if (subcommand === "diff") {
+    return [...GIT_GLOBAL_FLAGS, "diff", ...GIT_DIFF_FLAGS, ...rest];
+  }
+
+  return [...GIT_GLOBAL_FLAGS, subcommand, ...rest];
 }
 
 function classifyFailure(result: {
@@ -61,7 +75,7 @@ export function runGitCommand(options: RunGitCommandOptions): GitCommandResult {
   const spawnImpl = options.spawnSyncImpl ?? spawnSync;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const commandArgs = [...GIT_SAFETY_FLAGS, ...options.args];
+  const commandArgs = buildCommandArgs(options.args);
   const spawnOptions: SpawnSyncOptionsWithStringEncoding = {
     cwd: options.cwd,
     encoding: "utf8",
