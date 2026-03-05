@@ -30,7 +30,7 @@ jobs:
             asset_name: ctx-macos-arm64
             binary_name: ctx
             archive_ext: tar.gz
-          - runs_on: macos-13
+          - runs_on: macos-15-intel
             asset_name: ctx-macos-x64
             binary_name: ctx
             archive_ext: tar.gz
@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -49,7 +51,7 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
       - name: Build binary (non-Windows)
         if: runner.os != 'Windows'
