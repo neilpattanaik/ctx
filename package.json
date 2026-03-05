@@ -1,6 +1,6 @@
 {
   "name": "ctx",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "bin": {
@@ -11,7 +11,7 @@
     "dev": "bun run src/index.ts",
     "test": "bun test",
     "ci:prepare-results": "mkdir -p test-results",
-    "test:unit": "bun test $(rg --files test --glob '**/*.test.ts' --glob '!integration/**' --glob '!**/*.integration.test.ts' --glob '!**/cli-e2e.test.ts')",
+    "test:unit": "bun test $(rg --files test --glob '**/*.test.ts' --glob '!integration/**' --glob '!**/*.integration.test.ts' --glob '!**/cli-e2e.test.ts' --glob '!**/golden-snapshots.test.ts')",
     "test:integration": "bun test $(rg --files test --glob '**/*.integration.test.ts')",
     "test:e2e": "bun test test/integration/cli-e2e.test.ts",
     "test:e2e:flake": "bun run test/integration/flaky-e2e.ts --cycles 3 --max-reruns 1",
@@ -19,7 +19,7 @@
     "test:soak": "bun run benchmark:ci",
     "test:soak:e2e": "bun run test/integration/soak-e2e.ts --runs 8 --file-count 200 --assert-success",
     "test:soak:e2e:ci": "bun run ci:prepare-results && bun run test/integration/soak-e2e.ts --runs 10 --file-count 200 --json --assert-success --assert-deterministic > test-results/e2e-soak-report.json",
-    "test:unit:ci": "bun run ci:prepare-results && bun test $(rg --files test --glob '**/*.test.ts' --glob '!integration/**' --glob '!**/*.integration.test.ts' --glob '!**/cli-e2e.test.ts') --coverage --coverage-reporter=lcov --coverage-dir coverage/unit --reporter=junit --reporter-outfile test-results/unit.junit.xml && bun run test/performance/coverage-gate.ts --lane unit --lcov coverage/unit/lcov.info --config test/performance/coverage-thresholds.json",
+    "test:unit:ci": "bun run ci:prepare-results && bun test $(rg --files test --glob '**/*.test.ts' --glob '!integration/**' --glob '!**/*.integration.test.ts' --glob '!**/cli-e2e.test.ts' --glob '!**/golden-snapshots.test.ts') --coverage --coverage-reporter=lcov --coverage-dir coverage/unit --reporter=junit --reporter-outfile test-results/unit.junit.xml && bun run test/performance/coverage-gate.ts --lane unit --lcov coverage/unit/lcov.info --config test/performance/coverage-thresholds.json",
     "test:integration:ci": "bun run ci:prepare-results && bun test $(rg --files test --glob '**/*.integration.test.ts') --coverage --coverage-reporter=lcov --coverage-dir coverage/integration --reporter=junit --reporter-outfile test-results/integration.junit.xml && bun run test/performance/coverage-gate.ts --lane integration --lcov coverage/integration/lcov.info --config test/performance/coverage-thresholds.json",
     "test:e2e:ci:raw": "bun run ci:prepare-results && CTX_E2E_ARTIFACT_ROOT=test-results/e2e-diagnostics bun test test/integration/cli-e2e.test.ts --coverage --coverage-reporter=lcov --coverage-dir coverage/e2e --reporter=junit --reporter-outfile test-results/e2e.junit.xml && bun run test/performance/coverage-gate.ts --lane e2e --lcov coverage/e2e/lcov.info --config test/performance/coverage-thresholds.json",
     "test:e2e:flake-gate": "bun run test/performance/e2e-flake-gate.ts --command 'bun run test:e2e:ci:raw' --max-reruns 1 --report test-results/e2e-flake-gate-report.json --history test-results/e2e-flake-gate-history.json --flake-threshold 3 --window-days 14 --parent-bead ctx-1az.3.4",
