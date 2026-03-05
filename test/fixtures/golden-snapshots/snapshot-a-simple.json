@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "Investigate fixture auth flow",
+    "--repo",
+    "test/fixtures/golden-repo",
+    "--git-status",
+    "off"
+  ],
+  "exitCode": 0,
+  "stdout": [
+    "<!-- CTX:BEGIN -->\n<ctx_metadata>\nrepo_root: /data/projects/ctx/test/fixtures/golden-repo\nrun_id: 78da043d\nmode: plan\nbudget_tokens: 60000\nestimated_prompt_tokens: 723\nline_numbers: true\nprivacy_mode: normal\ndiscovery_backend: offline\n</ctx_metadata>\n<task>\nInvestigate fixture auth flow\n</task>\n<open_questions>\n- none\n</open_questions>\n<repo_overview>\nbuild_hints:\n- none\nlanguage_stats:\n- typescript: 3\n- go: 1\n- markdown: 1\n- python: 1\n- rust: 1\nindex_status: indexed_files=7, persistence=enabled\nignore_summary: gitignore_patterns=0, config_ignores=4\ngit_status:\n- none\n</repo_overview>\n<file_tree>\n- go/service.go\n- README.md\n- rust/lib.rs\n- scripts/migrate.py\n- src/auth/login.test.ts\n- src/auth/login.ts\n- src/main.ts\n</file_tree>\n<discovery_handoff_summary>\nentrypoints:\n- src/main.ts: entrypoint score=1000; heuristics=framework_root_entry\nkey_modules:\n- src/auth/login.test.ts: ranked score=300\n- src/auth/login.ts: ranked score=300\ndata_flows:\n- none\nconfig_knobs:\n- none\ntests:\n- src/auth/login.test.ts: selected test context\n</discovery_handoff_summary>\n<codemaps>\n- none\n</codemaps>\n<files>\n--- src/auth/login.test.ts (full, priority=core) ---\nrationale: offline score=300, content_hits=1, path_hits=0\n0001| import { describe, expect, test } from \"bun:test\";\n0002| import { authenticateUser } from \"./login\";\n0003| \n0004| describe(\"authenticateUser\", () => {\n0005|   test(\"accepts demo credentials\", () => {\n0006|     expect(authenticateUser(\"demo\", \"demo-password\")).toBe(true);\n0007|   });\n0008| \n0009|   test(\"rejects empty credentials\", () => {\n0010|     expect(authenticateUser(\"\", \"\")).toBe(false);\n0011|   });\n0012| });\n0013| \n--- src/auth/login.ts (full, priority=core) ---\nrationale: offline score=300, content_hits=1, path_hits=0\n0001| export function authenticateUser(username: string, password: string): boolean {\n0002|   if (username.length === 0 || password.length === 0) {\n0003|     return false;\n0004|   }\n0005|   return username === \"demo\" && password === \"demo-password\";\n0006| }\n0007| \n--- src/main.ts (full, priority=core) ---\nrationale: offline score=1000, content_hits=0, path_hits=0, entrypoint_boost=40\n0001| import { authenticateUser } from \"./auth/login\";\n0002| \n0003| export function runApp(): string {\n0004|   const result = authenticateUser(\"demo\", \"demo-password\");\n0005|   return result ? \"ok\" : \"denied\";\n0006| }\n0007| \n</files>\n<git_diff>\n- none\n</git_diff>\n<instructions>\nYou are an expert software architect. Architecture planning only.\nUsing only the context above, provide:\n1) outcome and acceptance criteria\n2) key assumptions\n3) current architecture summary\n4) proposed architecture changes\n5) file-by-file change plan (no code)\n6) implementation sequence\n7) test strategy\n8) risks and mitigations\n9) explicit gaps in context\n</instructions>\n<token_report>\nbudget: 60000\nestimated: 723\nby_section:\n- codemaps: 0\n- files: 217\n- git_diff: 2\n- handoff_summary: 120\n- manifest: 100\n- metadata: 120\n- repo_overview: 120\n- task: 9\n- tree: 35\nby_file:\n- src/auth/login.test.ts: 101\n- src/auth/login.ts: 64\n- src/main.ts: 52\ndegradations:\n- none\n</token_report>\n<manifest>\n- src/main.ts [mode=full, priority=core, score=350]\n  rationale: offline score=1000, content_hits=0, path_hits=0, entrypoint_boost=40\n- src/auth/login.test.ts [mode=full, priority=core, score=50]\n  rationale: offline score=300, content_hits=1, path_hits=0\n- src/auth/login.ts [mode=full, priority=core, score=50]\n  rationale: offline score=300, content_hits=1, path_hits=0\n</manifest>\n<!-- CTX:END -->"
+  ],
+  "stderr": [
+    "Scanning repository...",
+    "Updating index...",
+    "Discovery: using auto (default)",
+    "Discovery: turn 1/1...",
+    "Assembling prompt...",
+    "Budget: 60000 | Estimated: 0 | Files: 0 (0 full, 0 slices, 0 codemap)"
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "transcript": {
+    "schema_version": "ctx-e2e-log.v1",
+    "step": "main",
+    "env_flags": {
+      "dry_run": false,
+      "json_summary": false,
+      "no_llm": true,
+      "quiet": false,
+      "verbose": false,
+      "discover_mode": "auto",
+      "redact_mode": "default",
+      "redact_pattern_count": 0
+    },
+    "exit_code": 0,
+    "stdout_line_count": 1,
+    "stderr_line_count": 6,
+    "diagnostics_emitted": 7
+  },
+  "stderr_messages": [
+    "Scanning repository...",
+    "Updating index...",
+    "Discovery: using offline (default)",
+    "Discovery: turn 1/1...",
+    "Assembling prompt...",
+    "Budget: 60000 | Estimated: 0 | Files: 0 (0 full, 0 slices, 0 codemap)"
+  ],
+  "diagnostic_events": [
+    {
+      "event": "stderr_line",
+      "message": "Scanning repository...",
+      "redaction_count": 0
+    },
+    {
+      "event": "stderr_line",
+      "message": "Updating index...",
+      "redaction_count": 0
+    },
+    {
+      "event": "stderr_line",
+      "message": "Discovery: using offline (default)",
+      "redaction_count": 0
+    },
+    {
+      "event": "stderr_line",
+      "message": "Discovery: turn 1/1...",
+      "redaction_count": 0
+    },
+    {
+      "event": "stderr_line",
+      "message": "Assembling prompt...",
+      "redaction_count": 0
+    },
+    {
+      "event": "stderr_line",
+      "message": "Budget: 60000 | Estimated: 0 | Files: 0 (0 full, 0 slices, 0 codemap)",
+      "redaction_count": 0
+    },
+    {
+      "event": "stdout_line",
+      "message": "<stdout:90 lines>",
+      "redaction_count": 0
+    }
+  ],
+  "output_files": []
+}

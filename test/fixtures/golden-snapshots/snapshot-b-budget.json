@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "Investigate fixture auth flow",
+    "--budget",
+    "1200",
+    "--repo",
+    "test/fixtures/golden-repo",
+    "--git-status",
+    "off"
+  ],
+  "exitCode": 0,
+  "stdout": [
+    "<!-- CTX:BEGIN -->\n<ctx_metadata>\nrepo_root: /data/projects/ctx/test/fixtures/golden-repo\nrun_id: 78da043d\nmode: plan\nbudget_tokens: 1200\nestimated_prompt_tokens: 473\nline_numbers: true\nprivacy_mode: normal\ndiscovery_backend: offline\n</ctx_metadata>\n<task>\nInvestigate fixture auth flow\n</task>\n<open_questions>\n- none\n</open_questions>\n<repo_overview>\nbuild_hints:\n- none\nlanguage_stats:\n- typescript: 3\n- go: 1\n- markdown: 1\n- python: 1\n- rust: 1\nindex_status: indexed_files=7, persistence=enabled\nignore_summary: gitignore_patterns=0, config_ignores=4\ngit_status:\n- none\n</repo_overview>\n<file_tree>\n- none\n</file_tree>\n<discovery_handoff_summary>\nentrypoints:\n- src/main.ts: entrypoint score=1000; heuristics=framework_root_entry\nkey_modules:\n- src/auth/login.test.ts: ranked score=300\n- src/auth/login.ts: ranked score=300\ndata_flows:\n- none\nconfig_knobs:\n- none\ntests:\n- src/auth/login.test.ts: selected test context\n</discovery_handoff_summary>\n<codemaps>\n- none\n</codemaps>\n<files>\n- none\n</files>\n<git_diff>\n- none\n</git_diff>\n<instructions>\nYou are an expert software architect. Architecture planning only.\nUsing only the context above, provide:\n1) outcome and acceptance criteria\n2) key assumptions\n3) current architecture summary\n4) proposed architecture changes\n5) file-by-file change plan (no code)\n6) implementation sequence\n7) test strategy\n8) risks and mitigations\n9) explicit gaps in context\n</instructions>\n<token_report>\nbudget: 1200\nestimated: 473\nby_section:\n- codemaps: 0\n- files: 0\n- git_diff: 2\n- handoff_summary: 120\n- manifest: 100\n- metadata: 120\n- repo_overview: 120\n- task: 9\n- tree: 2\nby_file:\n- none\ndegradations:\n- full_to_slices: degrade src/auth/login.test.ts full->slices (delta=86)\n- full_to_slices: degrade src/auth/login.ts full->slices (delta=41)\n- full_to_slices: degrade src/main.ts full->slices (delta=38)\n- slices_to_codemap_only: degrade src/auth/login.test.ts slices->codemap_only (delta=-205)\n- slices_to_codemap_only: degrade src/auth/login.ts slices->codemap_only (delta=-197)\n- slices_to_codemap_only: degrade src/main.ts slices->codemap_only (delta=-206)\n- drop_codemap_only: drop src/auth/login.test.ts codemap_only (delta=220)\n- drop_codemap_only: drop src/auth/login.ts codemap_only (delta=220)\n- drop_codemap_only: drop src/main.ts codemap_only (delta=220)\n- codemap_complete_to_summary: degrade src/auth/login.test.ts complete->summary (delta=0)\n- codemap_complete_to_summary: degrade src/auth/login.ts complete->summary (delta=0)\n- codemap_complete_to_summary: degrade src/main.ts complete->summary (delta=0)\n- shrink_slice_windows: shrink_slice_windows (delta=0)\n- shrink_slice_windows: shrink_slice_windows (delta=0)\n- reduce_tree_verbosity: reduce_tree_verbosity (delta=18)\n- reduce_tree_verbosity: reduce_tree_verbosity (delta=15)\n</token_report>\n<manifest>\n- none\n</manifest>\n<!-- CTX:END -->"
+  ],
+  "stderr": [
+    "Scanning repository...",
+    "Updating index...",
+    "Discovery: using auto (default)",
+    "Discovery: turn 1/1...",
+    "Assembling prompt...",
+    "Budget: 1200 | Estimated: 0 | Files: 0 (0 full, 0 slices, 0 codemap)",
+    "Warning: budget exceeded, applied 16 degradations"
+  ]
+}

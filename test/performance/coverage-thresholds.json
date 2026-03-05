@@ -1,0 +1,46 @@
+{
+  "lanes": {
+    "unit": {
+      "global": {
+        "line": 80,
+        "functions": 88
+      },
+      "module_line_floors": {
+        "src/cli/": 80,
+        "src/discovery/": 80,
+        "src/git/": 90,
+        "src/scanner/": 88,
+        "src/search/": 82,
+        "src/tools/": 90
+      },
+      "next_stage_targets": {
+        "line": 82,
+        "functions": 90
+      }
+    },
+    "integration": {
+      "global": {
+        "line": 65,
+        "functions": 75
+      },
+      "module_line_floors": {
+        "src/git/": 70,
+        "src/search/": 65
+      },
+      "next_stage_targets": {
+        "line": 68,
+        "functions": 78
+      }
+    },
+    "e2e": {
+      "global": {
+        "line": 25,
+        "functions": 35
+      },
+      "next_stage_targets": {
+        "line": 30,
+        "functions": 40
+      }
+    }
+  }
+}

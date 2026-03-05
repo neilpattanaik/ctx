@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "Investigate fixture auth flow",
+    "--mode",
+    "review",
+    "--diff",
+    "off",
+    "--repo",
+    "test/fixtures/golden-repo",
+    "--git-status",
+    "off"
+  ],
+  "exitCode": 0,
+  "stdout": [
+    "<!-- CTX:BEGIN -->\n<ctx_metadata>\nrepo_root: /data/projects/ctx/test/fixtures/golden-repo\nrun_id: 78da043d\nmode: review\nbudget_tokens: 60000\nestimated_prompt_tokens: 723\ndiff_mode: off\n</ctx_metadata>\n<task>\nInvestigate fixture auth flow\n</task>\n<git_diff>\n- none\n</git_diff>\n<repo_overview>\nbuild_hints:\n- none\nlanguage_stats:\n- typescript: 3\n- go: 1\n- markdown: 1\n- python: 1\n- rust: 1\nindex_status: indexed_files=7, persistence=enabled\nignore_summary: gitignore_patterns=0, config_ignores=4\ngit_status:\n- none\n</repo_overview>\n<file_tree>\n- go/service.go\n- README.md\n- rust/lib.rs\n- scripts/migrate.py\n- src/auth/login.test.ts\n- src/auth/login.ts\n- src/main.ts\n</file_tree>\n<codemaps>\n- none\n</codemaps>\n<files>\n--- src/auth/login.test.ts (full, priority=core) ---\nrationale: offline score=300, content_hits=1, path_hits=0\n0001| import { describe, expect, test } from \"bun:test\";\n0002| import { authenticateUser } from \"./login\";\n0003| \n0004| describe(\"authenticateUser\", () => {\n0005|   test(\"accepts demo credentials\", () => {\n0006|     expect(authenticateUser(\"demo\", \"demo-password\")).toBe(true);\n0007|   });\n0008| \n0009|   test(\"rejects empty credentials\", () => {\n0010|     expect(authenticateUser(\"\", \"\")).toBe(false);\n0011|   });\n0012| });\n0013| \n--- src/auth/login.ts (full, priority=core) ---\nrationale: offline score=300, content_hits=1, path_hits=0\n0001| export function authenticateUser(username: string, password: string): boolean {\n0002|   if (username.length === 0 || password.length === 0) {\n0003|     return false;\n0004|   }\n0005|   return username === \"demo\" && password === \"demo-password\";\n0006| }\n0007| \n--- src/main.ts (full, priority=core) ---\nrationale: offline score=1000, content_hits=0, path_hits=0, entrypoint_boost=40\n0001| import { authenticateUser } from \"./auth/login\";\n0002| \n0003| export function runApp(): string {\n0004|   const result = authenticateUser(\"demo\", \"demo-password\");\n0005|   return result ? \"ok\" : \"denied\";\n0006| }\n0007| \n</files>\n<instructions>\nPerform a thorough code review.\nOutput:\n- Summary\n- Findings grouped by severity (Critical / Warning / Suggestion)\nFor each finding include issue, impact, location, and fix direction.\nAlso evaluate API changes, edge cases, security, and tests.\n</instructions>\n<manifest>\n- src/main.ts [mode=full, priority=core, score=350]\n  rationale: offline score=1000, content_hits=0, path_hits=0, entrypoint_boost=40\n- src/auth/login.test.ts [mode=full, priority=core, score=50]\n  rationale: offline score=300, content_hits=1, path_hits=0\n- src/auth/login.ts [mode=full, priority=core, score=50]\n  rationale: offline score=300, content_hits=1, path_hits=0\n</manifest>\n<!-- CTX:END -->"
+  ],
+  "stderr": [
+    "Scanning repository...",
+    "Updating index...",
+    "Discovery: using auto (default)",
+    "Discovery: turn 1/1...",
+    "Assembling prompt...",
+    "Budget: 60000 | Estimated: 0 | Files: 0 (0 full, 0 slices, 0 codemap)"
+  ]
+}
